@@ -10,7 +10,15 @@ import (
 )
 
 func main() {
-	svc, err := auth.NewAuthServiceWithSimpleLogin("devDebugger/1.0", "1.0.0", "Nkx3Y2xvZ2luLmNu", "user", "password")
+	if true {
+		resp, err := auth.GetOauthToken("devDebugger/1.0", "1.0.0", "Nkx3Y2xvZ2luLmNu")
+		if err != nil {
+			panic(err)
+		}
+		println(resp.String())
+		return
+	}
+	svc, err := auth.NewAuthServiceWithSimpleLogin("devDebugger/1.0", "1.0.0", "Nkx3Y2xvZ2luLmNu", "色情文件鉴定", "yipaihuyan")
 	if err != nil {
 		panic(err)
 	}

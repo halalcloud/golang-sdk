@@ -10,7 +10,7 @@ import (
 )
 
 func main() {
-	if true {
+	if false {
 		resp, err := auth.GetOauthToken("devDebugger/1.0", "1.0.0", "Nkx3Y2xvZ2luLmNu")
 		if err != nil {
 			panic(err)

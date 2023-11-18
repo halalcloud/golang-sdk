@@ -9,6 +9,7 @@ import (
 	"io"
 	"net/url"
 	"os"
+	"os/signal"
 	"strconv"
 	"strings"
 	"sync"
@@ -16,6 +17,7 @@ import (
 
 	pbPublicUser "github.com/city404/v6-public-rpc-proto/go/v6/user"
 	"github.com/google/uuid"
+	"github.com/halalcloud/golang-sdk/pkg/print"
 	"github.com/halalcloud/golang-sdk/utils"
 	"github.com/mdp/qrterminal/v3"
 	"github.com/spf13/viper"
@@ -195,7 +197,44 @@ func NewAuthServiceWithOauth(writer io.Writer, appID, appVersion, appSecret stri
 		QuietZone: 1,
 	}
 	qrterminal.GenerateWithConfig("https://2dland.cn/cRyH", config)
-	return svc, nil
+	checkTimer := time.NewTicker(5 * time.Second)
+	defer checkTimer.Stop()
+	// catch interrupt signal
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, os.Interrupt)
+	print.PendingStatusEvent(writer, "Waiting for login...[%s]", oauthToken.Callback)
+	for {
+		select {
+		case <-checkTimer.C:
+
+			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+			checkLoginResponse, err := userClient.VerifyAuthToken(ctx, &pbPublicUser.LoginRequest{
+				State:      oauthToken.State,
+				Callback:   oauthToken.Callback,
+				ReturnType: 2,
+			})
+			if err != nil {
+				return nil, err
+			}
+			if checkLoginResponse.User != nil && len(checkLoginResponse.Token.RefreshToken) > 0 {
+				// checkLoginResponse = checkLoginResponse
+				svc.OnAccessTokenRefreshed(checkLoginResponse.Token.AccessToken, checkLoginResponse.Token.AccessTokenExpireTs, checkLoginResponse.Token.RefreshToken, checkLoginResponse.Token.RefreshTokenExpireTs)
+				newAuthService, err := NewAuthService(appID, appVersion, appSecret, checkLoginResponse.Token.RefreshToken)
+				if err != nil {
+					return nil, err
+				}
+				return newAuthService, nil
+				// break
+			}
+			// reset timer
+			checkTimer.Reset(5 * time.Second)
+		case <-c:
+			// interrupt signal
+			return nil, fmt.Errorf("interrupted")
+		}
+	}
+
 }
 
 func NewAuthService(appID, appVersion, appSecret, refreshToken string, options ...HalalOption) (*AuthService, error) {

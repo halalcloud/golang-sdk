@@ -13,7 +13,7 @@ func GetCurrentOpDir(args []string, index int) string {
 	}
 	opPath := currentDir + "/" + args[index]
 	if strings.HasPrefix(args[index], "/") {
-		opPath = args[0]
+		opPath = args[index]
 	}
 	return opPath
 }

@@ -196,13 +196,13 @@ func NewAuthServiceWithOauth(writer io.Writer, appID, appVersion, appSecret stri
 		WhiteChar: qrterminal.BLACK,
 		QuietZone: 1,
 	}
-	qrterminal.GenerateWithConfig("https://2dland.cn/cRyH", config)
+	qrterminal.GenerateWithConfig(oauthToken.Url, config)
 	checkTimer := time.NewTicker(5 * time.Second)
 	defer checkTimer.Stop()
 	// catch interrupt signal
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt)
-	print.PendingStatusEvent(writer, "Waiting for login...[%s]", oauthToken.Callback)
+	print.PendingStatusEvent(writer, "Waiting for login...[%s]", oauthToken.Url)
 	for {
 		select {
 		case <-checkTimer.C:
@@ -217,16 +217,23 @@ func NewAuthServiceWithOauth(writer io.Writer, appID, appVersion, appSecret stri
 			if err != nil {
 				return nil, err
 			}
-			if checkLoginResponse.User != nil && len(checkLoginResponse.Token.RefreshToken) > 0 {
-				// checkLoginResponse = checkLoginResponse
-				svc.OnAccessTokenRefreshed(checkLoginResponse.Token.AccessToken, checkLoginResponse.Token.AccessTokenExpireTs, checkLoginResponse.Token.RefreshToken, checkLoginResponse.Token.RefreshTokenExpireTs)
-				newAuthService, err := NewAuthService(appID, appVersion, appSecret, checkLoginResponse.Token.RefreshToken)
-				if err != nil {
-					return nil, err
+			if checkLoginResponse.Status == 6 {
+				login := checkLoginResponse.Login
+				if login == nil {
+					return nil, fmt.Errorf("login is nil")
 				}
-				return newAuthService, nil
-				// break
+				if login.User != nil && len(login.Token.RefreshToken) > 0 {
+					// checkLoginResponse = checkLoginResponse
+					svc.OnAccessTokenRefreshed(login.Token.AccessToken, login.Token.AccessTokenExpireTs, login.Token.RefreshToken, login.Token.RefreshTokenExpireTs)
+					newAuthService, err := NewAuthService(appID, appVersion, appSecret, login.Token.RefreshToken)
+					if err != nil {
+						return nil, err
+					}
+					return newAuthService, nil
+					// break
+				}
 			}
+
 			// reset timer
 			checkTimer.Reset(5 * time.Second)
 		case <-c:

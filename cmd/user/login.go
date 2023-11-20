@@ -5,6 +5,7 @@ package user
 
 import (
 	"os"
+	"time"
 
 	"github.com/halalcloud/golang-sdk/auth"
 	"github.com/halalcloud/golang-sdk/constants"
@@ -43,7 +44,7 @@ to quickly create a Cobra application.`,
 			print.FailureStatusEvent(os.Stdout, "Login failed, %s", err.Error())
 			return
 		}
-		// print.SuccessStatusEvent(os.Stdout, "Login success, %s", svc.GetAccessToken())
+		print.SuccessStatusEvent(os.Stdout, "Login success, %s", time.Now().String())
 	},
 }
 

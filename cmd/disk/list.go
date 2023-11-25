@@ -46,12 +46,13 @@ var ListCmd = &cobra.Command{
 		if len(args) > 0 {
 			opDir = utils.GetCurrentOpDir(args, 0)
 		}
+		client := pubUserFile.NewPubUserFileClient(serv.GetGrpcConnection())
 		for {
 			timeStart := time.Now()
 			sp := print.Spinner(os.Stdout, "Listing Directory [%s] ...", opDir)
 			ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
 			defer cancel()
-			result, err := pubUserFile.NewPubUserFileClient(serv.GetGrpcConnection()).List(ctx, &pubUserFile.FileListRequest{
+			result, err := client.List(ctx, &pubUserFile.FileListRequest{
 				Parent: &pubUserFile.File{Path: opDir},
 				ListInfo: &common.ScanListRequest{
 					Limit: limit,

@@ -1,10 +1,10 @@
 module github.com/halalcloud/golang-sdk
 
-go 1.21.3
+go 1.21.4
 
 require (
 	github.com/briandowns/spinner v1.23.0
-	github.com/city404/v6-public-rpc-proto/go v0.0.0-20231120091944-40c9803ab9d9
+	github.com/city404/v6-public-rpc-proto/go v0.0.0-20231127153814-9c9e443a7200
 	github.com/dustin/go-humanize v1.0.1
 	github.com/eiannone/keyboard v0.0.0-20220611211555-0d226195f203
 	github.com/fatih/color v1.14.1

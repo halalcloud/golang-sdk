@@ -4,7 +4,7 @@ go 1.21.4
 
 require (
 	github.com/briandowns/spinner v1.23.0
-	github.com/city404/v6-public-rpc-proto/go v0.0.0-20231127153814-9c9e443a7200
+	github.com/city404/v6-public-rpc-proto/go v0.0.0-20231129161812-f5a83b875e2d
 	github.com/dustin/go-humanize v1.0.1
 	github.com/eiannone/keyboard v0.0.0-20220611211555-0d226195f203
 	github.com/fatih/color v1.14.1
@@ -38,9 +38,9 @@ require (
 	go.uber.org/atomic v1.9.0 // indirect
 	go.uber.org/multierr v1.9.0 // indirect
 	golang.org/x/exp v0.0.0-20230905200255-921286631fa9 // indirect
-	golang.org/x/net v0.18.0 // indirect
-	golang.org/x/sys v0.14.0 // indirect
-	golang.org/x/term v0.14.0 // indirect
+	golang.org/x/net v0.19.0 // indirect
+	golang.org/x/sys v0.15.0 // indirect
+	golang.org/x/term v0.15.0 // indirect
 	golang.org/x/text v0.14.0 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20231030173426-d783a09b4405 // indirect
 	google.golang.org/protobuf v1.31.0 // indirect

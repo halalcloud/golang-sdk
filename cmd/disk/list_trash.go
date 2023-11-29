@@ -19,7 +19,7 @@ import (
 )
 
 // listTrashCmd represents the listTrash command
-var listTrashCmd = &cobra.Command{
+var ListTrashCmd = &cobra.Command{
 	Use:   "list-trash",
 	Short: "List trash items",
 	Long: `A longer description that spans multiple lines and likely contains examples
@@ -87,7 +87,7 @@ to quickly create a Cobra application.`,
 }
 
 func init() {
-	DiskCmd.AddCommand(listTrashCmd)
+	DiskCmd.AddCommand(ListTrashCmd)
 
 	// Here you will define your flags and configuration settings.
 

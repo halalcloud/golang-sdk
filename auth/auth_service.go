@@ -6,7 +6,6 @@ import (
 	"crypto/tls"
 	"fmt"
 	"io"
-	"net/url"
 	"os"
 	"os/signal"
 	"strconv"
@@ -37,47 +36,6 @@ type AuthService struct {
 	grpcConnection       *grpc.ClientConn
 	dopts                halalOptions
 	configMutex          sync.RWMutex
-}
-
-func GetOauthToken(appID, appVersion, appSecret string, options ...HalalOption) (*pbPublicUser.OauthTokenResponse, error) {
-	svc := &AuthService{
-		appID:        appID,
-		appVersion:   appVersion,
-		appSecret:    appSecret,
-		refreshToken: "",
-		dopts:        defaultOptions(),
-	}
-	for _, opt := range options {
-		opt.apply(&svc.dopts)
-	}
-
-	grpcServer := "grpcuserapi.2dland.cn:443"
-	dialContext, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-	grpcOptions := svc.dopts.grpcOptions
-	grpcOptions = append(grpcOptions, grpc.WithBlock(), grpc.WithAuthority("grpcuserapi.2dland.cn"), grpc.WithTransportCredentials(credentials.NewTLS(&tls.Config{})), grpc.WithUnaryInterceptor(func(ctx context.Context, method string, req, reply interface{}, cc *grpc.ClientConn, invoker grpc.UnaryInvoker, opts ...grpc.CallOption) error {
-		ctxx := svc.signContext(method, ctx)
-		err := invoker(ctxx, method, req, reply, cc, opts...) // invoking RPC method
-		return err
-	}))
-
-	grpcConnection, err := grpc.DialContext(dialContext, grpcServer, grpcOptions...)
-	if err != nil {
-		return nil, err
-	}
-	defer grpcConnection.Close()
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-
-	loginResponse, err := pbPublicUser.NewPubUserClient(grpcConnection).CreateAuthToken(ctx, &pbPublicUser.LoginRequest{
-		ReturnType: 2,
-	})
-
-	if err != nil {
-		return nil, err
-	}
-
-	return loginResponse, nil
 }
 
 func NewAuthServiceWithOauth(writer io.Writer, appID, appVersion, appSecret string, options ...HalalOption) (*AuthService, error) {
@@ -111,20 +69,11 @@ func NewAuthServiceWithOauth(writer io.Writer, appID, appVersion, appSecret stri
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	stateString := uuid.New().String()
-	loginUrlPrefix := "https://account.2dland.cn/sign?"
-	queryValues := url.Values{}
-	queryValues.Add("response_type", "query")
-	queryValues.Add("client_id", "cli/1.0.0")
-	queryValues.Add("redirect_uri", "https://baidu.com")
-	queryValues.Add("state", stateString)
-	queryValues.Add("scope", "userdata")
 	// queryValues.Add("callback", oauthToken.Callback)
-	encodedQuery := queryValues.Encode()
-	loginUrlPrefix += encodedQuery
 	oauthToken, err := userClient.CreateAuthToken(ctx, &pbPublicUser.LoginRequest{
 		ReturnType: 2,
 		State:      stateString,
-		ReturnUrl:  loginUrlPrefix,
+		ReturnUrl:  "",
 	})
 	if err != nil {
 		return nil, err

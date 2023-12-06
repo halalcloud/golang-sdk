@@ -56,6 +56,7 @@ func init() {
 	rootCmd.AddCommand(disk.CpCmd)
 	rootCmd.AddCommand(disk.ListTrashCmd)
 	rootCmd.AddCommand(disk.RnCmd)
+	rootCmd.AddCommand(disk.SearchCmd)
 }
 
 // initConfig reads in config file and ENV variables if set.

@@ -3,25 +3,34 @@ package downloader
 import (
 	"context"
 	"log"
+	"os"
+	"path"
 	"sync"
 	"time"
 
 	pubUserFile "github.com/city404/v6-public-rpc-proto/go/v6/userfile"
+	badger "github.com/dgraph-io/badger/v4"
 	"github.com/google/uuid"
 	"github.com/pion/webrtc/v4"
 )
 
 type SliceDownloader struct {
 	// authService       *auth.AuthService
-	candidatesMux     sync.Mutex
-	pendingCandidates []string
-	rtcConfiguration  webrtc.Configuration
-	peerConnection    *webrtc.PeerConnection
-	clientID          string
-	fileClient        pubUserFile.PubUserFileClient
+	controlCandidatesMux  sync.Mutex
+	pendingCandidates     []string
+	rtcConfiguration      webrtc.Configuration
+	controlPeerConnection *webrtc.PeerConnection
+	clientID              string
+	fileClient            pubUserFile.PubUserFileClient
+	rtcEnabled            bool
+	//cacheEnabled          bool
+	sliceDB *badger.DB
+	ctx     context.Context
+	cancel  context.CancelFunc
+	tmpDir  string
 }
 
-func NewSliceDownloader(fileClient pubUserFile.PubUserFileClient) *SliceDownloader {
+func NewSliceDownloader(fileClient pubUserFile.PubUserFileClient, ctx context.Context, tmpDir string) *SliceDownloader {
 	config := webrtc.Configuration{
 		ICEServers: []webrtc.ICEServer{
 			{
@@ -30,23 +39,39 @@ func NewSliceDownloader(fileClient pubUserFile.PubUserFileClient) *SliceDownload
 		},
 	}
 
+	ctx, cancel := context.WithCancel(ctx)
+
 	return &SliceDownloader{
 		// authService:       authService,
 		pendingCandidates: make([]string, 0),
 		rtcConfiguration:  config,
 		clientID:          uuid.NewString(),
 		fileClient:        fileClient,
+		ctx:               ctx,
+		cancel:            cancel,
+		tmpDir:            tmpDir,
 	}
 }
 
-func (s *SliceDownloader) StartDownload(fileID string) error {
+func (s *SliceDownloader) Start() error {
 	// Create a new RTCPeerConnection
+
+	if len(s.tmpDir) == 0 {
+		s.tmpDir = os.TempDir()
+	}
+	db, err := badger.Open(badger.DefaultOptions(path.Join(s.tmpDir, "halalcloud.storage")))
+	if err != nil {
+		log.Printf("badger open error: %v", err)
+		return nil
+	}
+	s.sliceDB = db
+	// s.cacheEnabled = true
 	peerConnection, err := webrtc.NewPeerConnection(s.rtcConfiguration)
 	if err != nil {
 		return err
 	}
 
-	s.peerConnection = peerConnection
+	s.controlPeerConnection = peerConnection
 
 	dataChannel, err := peerConnection.CreateDataChannel("data", nil)
 	if err != nil {
@@ -79,8 +104,8 @@ func (s *SliceDownloader) StartDownload(fileID string) error {
 	peerConnection.OnICECandidate(s.OnICECandidate)
 
 	dataChannel.OnOpen(func() {
-		log.Printf("Data channel '%s'-'%d' open. Random messages will now be sent to any connected DataChannels every 5 seconds\n", dataChannel.Label(), dataChannel.ID())
-
+		log.Printf("Data channel '%s'-'%d' open. RTC P2P system init... \n", dataChannel.Label(), dataChannel.ID())
+		s.rtcEnabled = true
 	})
 
 	// Register text message handling
@@ -90,20 +115,21 @@ func (s *SliceDownloader) StartDownload(fileID string) error {
 
 	dataChannel.OnClose(func() {
 		log.Printf("Data channel '%s'-'%d' closed\n", dataChannel.Label(), dataChannel.ID())
+		s.rtcEnabled = false
 	})
 
 	// Create an offer to send to the other process
 	offer, err := peerConnection.CreateOffer(nil)
 	if err != nil {
 		log.Printf("CreateOffer error: %v", err)
-		return err
+		return nil
 	}
 
 	// Sets the LocalDescription, and starts our UDP listeners
 	// Note: this will start the gathering of ICE candidates
 	if err = peerConnection.SetLocalDescription(offer); err != nil {
 		log.Printf("SetLocalDescription error: %v", err)
-		return err
+		return nil
 	}
 
 	go func() {
@@ -131,14 +157,15 @@ func (s *SliceDownloader) StartDownload(fileID string) error {
 	operationCtx, cancel := context.WithTimeout(context.Background(), time.Minute)
 	defer cancel()
 
-	offerResult, err := s.fileClient.CreateDownloadOffer(operationCtx, &pubUserFile.RTCFileRequest{
-		ContentIdentity: fileID,
-		ClientIdentity:  s.clientID,
-		Sdp:             offer.SDP,
+	offerResult, err := s.fileClient.CreateManageRTCOffer(operationCtx, &pubUserFile.ManageRTCRequest{
+		// ContentIdentity: fileID,
+		ClientIdentity: s.clientID,
+		Sdp:            offer.SDP,
 	})
 
 	if err != nil {
-		return err
+		log.Printf("CreateManageRTCOffer error: %v", err)
+		return nil
 	}
 
 	// wait till peer connection is ready
@@ -158,11 +185,7 @@ func (s *SliceDownloader) StartDownload(fileID string) error {
 	} else {
 		log.Printf("no more clients")
 	}
-	done := make(chan bool)
-	<-done
-
 	return nil
-
 }
 
 /*
@@ -175,13 +198,13 @@ func (s *SliceDownloader) Stop() error {
 */
 
 func (s *SliceDownloader) OnICECandidate(candidate *webrtc.ICECandidate) {
-	s.candidatesMux.Lock()
-	defer s.candidatesMux.Unlock()
+	s.controlCandidatesMux.Lock()
+	defer s.controlCandidatesMux.Unlock()
 	candidateStr := ""
 	if candidate != nil {
 		candidateStr = candidate.ToJSON().Candidate
 	}
-	desc := s.peerConnection.RemoteDescription()
+	desc := s.controlPeerConnection.RemoteDescription()
 	if desc == nil {
 		s.pendingCandidates = append(s.pendingCandidates, candidateStr)
 	} else {
@@ -211,4 +234,13 @@ func (s *SliceDownloader) getICECandidate() []string {
 		return nil
 	}
 	return result.Candidate
+}
+
+func (s *SliceDownloader) Stop() error {
+	s.cancel()
+	if s.sliceDB != nil {
+		return s.sliceDB.Close()
+	}
+	// return s.sliceDB.Close()
+	return nil
 }

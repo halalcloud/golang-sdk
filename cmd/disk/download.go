@@ -19,6 +19,7 @@ import (
 	"google.golang.org/grpc/status"
 
 	// "github.com/halalcloud/golang-sdk/pkg/downloader"
+	"github.com/halalcloud/golang-sdk/pkg/downloader"
 	"github.com/halalcloud/golang-sdk/pkg/print"
 	"github.com/halalcloud/golang-sdk/utils"
 	"github.com/ipfs/go-cid"
@@ -49,15 +50,23 @@ Display Disk Usage, Quota.`,
 		if len(id) > 0 {
 			newPath = "{id:{" + id + "}}"
 		}
+		client := pubUserFile.NewPubUserFileClient(serv.GetGrpcConnection())
+
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+		sliceDownloader := downloader.NewSliceDownloader(client, ctx, "")
+		err = sliceDownloader.Start()
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+		defer sliceDownloader.Stop()
 
 		sp := print.Spinner(os.Stdout, "Download Path [%s] ...", newPath)
 		if len(id) > 0 {
 			newPath = ""
 		}
 
-		ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
-		defer cancel()
-		client := pubUserFile.NewPubUserFileClient(serv.GetGrpcConnection())
 		result, err := client.ParseFileSlice(ctx, &pubUserFile.File{
 
 			// Parent: &pubUserFile.File{Path: currentDir},

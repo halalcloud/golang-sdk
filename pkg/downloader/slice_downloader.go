@@ -139,6 +139,7 @@ func (s *SliceDownloader) Start() error {
 			}
 			data := s.getICECandidate()
 			//if data != nil {
+			log.Printf("GetICECandidate: %v", len(data))
 			for _, c := range data {
 				if len(c) == 0 {
 					break
@@ -146,6 +147,7 @@ func (s *SliceDownloader) Start() error {
 				candidate := webrtc.ICECandidateInit{
 					Candidate: c,
 				}
+				log.Printf("Server ICECandidate: %v", c)
 				if err = peerConnection.AddICECandidate(candidate); err != nil {
 					log.Printf("AddICECandidate error: %v", err)
 				}
@@ -204,6 +206,7 @@ func (s *SliceDownloader) OnICECandidate(candidate *webrtc.ICECandidate) {
 	if candidate != nil {
 		candidateStr = candidate.ToJSON().Candidate
 	}
+	log.Printf("OnICECandidate: %s", candidateStr)
 	desc := s.controlPeerConnection.RemoteDescription()
 	if desc == nil {
 		s.pendingCandidates = append(s.pendingCandidates, candidateStr)

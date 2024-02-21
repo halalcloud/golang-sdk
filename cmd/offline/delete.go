@@ -16,20 +16,25 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// parseCmd represents the info command
-var parseCmd = &cobra.Command{
-	Use:   "parse",
-	Short: "Parse url info",
-	Long: `Get offline download info from the HalalCloud API.
-
-Display Disk Usage, Quota.`,
+// deleteCmd represents the info command
+var deleteCmd = &cobra.Command{
+	Use:     "delete",
+	Aliases: []string{"del"},
+	Short:   "delete url info to offline download",
+	Long:    `Delete offline download info from the HalalCloud API.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		// fmt.Println("parse called")
 		if len(args) == 0 {
 			cmd.Help()
 			return
 		}
-		fmt.Println("parse called with", args[0])
+		deleteArray := []string{}
+		for _, v := range args {
+			deleteArray = append(deleteArray, strings.Split(v, ",")...)
+
+			// deleteArray = append(deleteArray, v)
+		}
+		fmt.Printf("delete task %s\n", deleteArray)
+
 		serv, err := auth.NewAuthService(constants.AppID, constants.AppVersion, constants.AppSecret, "")
 		if err != nil {
 			fmt.Println(err)
@@ -37,18 +42,9 @@ Display Disk Usage, Quota.`,
 		}
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
 		defer cancel()
-		preParse := strings.TrimSpace(args[0]) //5033e3be284d4742f1a1d07e0dc5c2e0bde79290_otp_btv1
-
-		req := &pubUserOffline.TaskParseRequest{
-			// Url: args[0],
-		}
-		if strings.HasSuffix(preParse, "_otp_btv1") || strings.HasSuffix(preParse, "_otp_btv2") {
-			req.Identity = preParse
-		} else {
-			req.Url = preParse
-		}
-
-		result, err := pubUserOffline.NewPubOfflineTaskClient(serv.GetGrpcConnection()).Parse(ctx, req)
+		result, err := pubUserOffline.NewPubOfflineTaskClient(serv.GetGrpcConnection()).Delete(ctx, &pubUserOffline.OfflineTaskDeleteRequest{
+			Identity: deleteArray,
+		})
 		if err != nil {
 			fmt.Println(err)
 			return
@@ -59,7 +55,7 @@ Display Disk Usage, Quota.`,
 }
 
 func init() {
-	OfflineCmd.AddCommand(parseCmd)
+	OfflineCmd.AddCommand(deleteCmd)
 
 	// Here you will define your flags and configuration settings.
 

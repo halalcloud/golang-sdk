@@ -55,6 +55,12 @@ github.com/city404/v6-public-rpc-proto/go v0.0.0-20240217165814-d2ecfc5c223d h1:
 github.com/city404/v6-public-rpc-proto/go v0.0.0-20240217165814-d2ecfc5c223d/go.mod h1:ghj8nEkIevOaJ9QqzVyHVp3u0Buui/g7cdfruFOnUEA=
 github.com/city404/v6-public-rpc-proto/go v0.0.0-20240218171513-778b9b4ddce1 h1:buB6voBovl2IW1cv+9tURyw0VZcZBlFG/CDoF7AqH6g=
 github.com/city404/v6-public-rpc-proto/go v0.0.0-20240218171513-778b9b4ddce1/go.mod h1:ghj8nEkIevOaJ9QqzVyHVp3u0Buui/g7cdfruFOnUEA=
+github.com/city404/v6-public-rpc-proto/go v0.0.0-20240218192856-315fd97fee54 h1:HI5ndfZt9nFfn0BWYnklnn30jSV3T0GtGAZIb89KQoM=
+github.com/city404/v6-public-rpc-proto/go v0.0.0-20240218192856-315fd97fee54/go.mod h1:ghj8nEkIevOaJ9QqzVyHVp3u0Buui/g7cdfruFOnUEA=
+github.com/city404/v6-public-rpc-proto/go v0.0.0-20240219231000-da555bc0afd6 h1:D3vUfmdPDA2WRyrufOBH4LHx5V7WHIkntE3n5DyyIS8=
+github.com/city404/v6-public-rpc-proto/go v0.0.0-20240219231000-da555bc0afd6/go.mod h1:ghj8nEkIevOaJ9QqzVyHVp3u0Buui/g7cdfruFOnUEA=
+github.com/city404/v6-public-rpc-proto/go v0.0.0-20240219232643-1762b5ff41bd h1:G6NNVlzIVofQ2RoSgNtLPl46/KzYYg4kXJYnfWU2tWU=
+github.com/city404/v6-public-rpc-proto/go v0.0.0-20240219232643-1762b5ff41bd/go.mod h1:ghj8nEkIevOaJ9QqzVyHVp3u0Buui/g7cdfruFOnUEA=
 github.com/client9/misspell v0.3.4/go.mod h1:qj6jICC3Q7zFZvVWo7KLAzC3yx5G7kyvSDkc90ppPyw=
 github.com/cncf/udpa/go v0.0.0-20191209042840-269d4d468f6f/go.mod h1:M8M6+tZqaGXZJjfX53e64911xZQV5JYwmTeXPW+k8Sc=
 github.com/cncf/udpa/go v0.0.0-20200629203442-efcf912fb354/go.mod h1:WmhPx2Nbnhtbo57+VJT5O0JRkEi1Wbu0z5j0R8u5Hbk=

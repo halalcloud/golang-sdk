@@ -1,38 +1,43 @@
 /*
 Copyright © 2023 NAME HERE <EMAIL ADDRESS>
 */
-package disk
+package share
 
 import (
 	"context"
-	"fmt"
 	"os"
+	"strconv"
+
+	"github.com/dustin/go-humanize"
+	"github.com/halalcloud/golang-sdk/pkg/print"
+	"github.com/olekukonko/tablewriter"
+
+	"fmt"
 	"time"
 
 	common "github.com/city404/v6-public-rpc-proto/go/v6/common"
-	pubUserFile "github.com/city404/v6-public-rpc-proto/go/v6/userfile"
-	"github.com/dustin/go-humanize"
+	pubFileShare "github.com/city404/v6-public-rpc-proto/go/v6/fileshare"
 	"github.com/eiannone/keyboard"
 	"github.com/halalcloud/golang-sdk/auth"
 	"github.com/halalcloud/golang-sdk/constants"
-	"github.com/halalcloud/golang-sdk/pkg/print"
-	"github.com/halalcloud/golang-sdk/utils"
-	"github.com/olekukonko/tablewriter"
 	"github.com/spf13/cobra"
 )
 
-// listCmd represents the list command
-var ListCmd = &cobra.Command{
+// listCmd represents the info command
+var listCmd = &cobra.Command{
 	Use:     "list",
-	Short:   "list files in current directory",
-	Long:    `list files in current directory`,
-	Aliases: []string{"ls", "dir"},
+	Aliases: []string{"ls"},
+	Short:   "list user share",
+	Long:    `List share.`,
 	Run: func(cmd *cobra.Command, args []string) {
+
 		serv, err := auth.NewAuthService(constants.AppID, constants.AppVersion, constants.AppSecret, "")
 		if err != nil {
 			fmt.Println(err)
 			return
 		}
+
+		client := pubFileShare.NewPubFileShareClient(serv.GetGrpcConnection())
 		limit := int64(10)
 		token := ""
 		keyEnable := true
@@ -42,18 +47,12 @@ var ListCmd = &cobra.Command{
 		defer func() {
 			_ = keyboard.Close()
 		}()
-		opDir := utils.GetCurrentDir()
-		if len(args) > 0 {
-			opDir = utils.GetCurrentOpDir(args, 0)
-		}
-		client := pubUserFile.NewPubUserFileClient(serv.GetGrpcConnection())
 		for {
 			timeStart := time.Now()
-			sp := print.Spinner(os.Stdout, "Listing Directory [%s] ...", opDir)
+			sp := print.Spinner(os.Stdout, "Listing Offline Download List ...")
 			ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
 			defer cancel()
-			result, err := client.List(ctx, &pubUserFile.FileListRequest{
-				Parent: &pubUserFile.File{Path: opDir},
+			result, err := client.List(ctx, &pubFileShare.FileShareListRequest{
 				ListInfo: &common.ScanListRequest{
 					Limit: limit,
 					Token: token,
@@ -67,10 +66,10 @@ var ListCmd = &cobra.Command{
 			sp(true)
 			timeEscaped := time.Since(timeStart)
 
-			if result.Files != nil && len(result.Files) > 0 {
-				printList(opDir, result)
+			if result.Shares != nil && len(result.Shares) > 0 {
+				printList(result)
 			}
-			print.InfoStatusEvent(os.Stdout, "%d items, %s escaped.", len(result.Files), timeEscaped.String())
+			print.InfoStatusEvent(os.Stdout, "%d items, %s escaped.", len(result.Shares), timeEscaped.String())
 			if result.ListInfo == nil || result.ListInfo.Token == "" {
 				break
 			}
@@ -89,30 +88,30 @@ var ListCmd = &cobra.Command{
 }
 
 func init() {
-	DiskCmd.AddCommand(ListCmd)
+	ShareCmd.AddCommand(listCmd)
 
 	// Here you will define your flags and configuration settings.
 
 	// Cobra supports Persistent Flags which will work for this command
 	// and all subcommands, e.g.:
-	// listCmd.PersistentFlags().String("foo", "", "A help for foo")
+	// infoCmd.PersistentFlags().String("foo", "", "A help for foo")
 
 	// Cobra supports local flags which will only run when this command
 	// is called directly, e.g.:
-	// listCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+	// infoCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 }
 
-func printList(currentPath string, result *pubUserFile.FileListResponse) {
+func printList(result *pubFileShare.FileShareListResponse) {
 	data := [][]string{}
 
 	table := tablewriter.NewWriter(os.Stdout)
-	table.SetHeader([]string{"Name", "Type", "ID", "Size", "CreateTime"})
-	for _, v := range result.Files {
+	table.SetHeader([]string{"Name", "ADDR", "ID", "Size", "CreateTime"})
+	for _, v := range result.Shares {
 		size := "-"
-		if !v.Dir {
-			size = humanize.IBytes(uint64(v.Size))
-		}
-		table.Append([]string{v.Name, v.MimeType, v.Identity, size, time.UnixMilli(v.CreateTs).Format("2006-01-02 15:04:05")})
+
+		size = humanize.IBytes(uint64(v.FileSize))
+
+		table.Append([]string{v.Name, strconv.Itoa(len(v.PathList)), v.Identity, size, time.UnixMilli(v.CreateTs).Format("2006-01-02 15:04:05")})
 	}
 
 	hasMore := false

@@ -7,8 +7,10 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/halalcloud/golang-sdk/cmd/dav"
 	"github.com/halalcloud/golang-sdk/cmd/disk"
 	"github.com/halalcloud/golang-sdk/cmd/offline"
+	"github.com/halalcloud/golang-sdk/cmd/share"
 	"github.com/halalcloud/golang-sdk/cmd/user"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -51,6 +53,8 @@ func init() {
 	rootCmd.AddCommand(user.UserCmd)
 	rootCmd.AddCommand(disk.DiskCmd)
 	rootCmd.AddCommand(offline.OfflineCmd)
+	rootCmd.AddCommand(share.ShareCmd)
+	rootCmd.AddCommand(dav.DavCmd)
 	rootCmd.AddCommand(disk.ListCmd)
 	rootCmd.AddCommand(disk.CdCmd)
 	rootCmd.AddCommand(disk.PwdCmd)

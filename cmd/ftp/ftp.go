@@ -10,7 +10,7 @@ import (
 // shareCmd represents the share commandshareCmd
 var FtpCmd = &cobra.Command{
 	Use:     "ftp",
-	Aliases: []string{"webdav"},
+	Aliases: []string{"sftp"},
 	Short:   "ftp functions",
 	Long:    `ftp interface for the HalalCloud API.`,
 	PreRun: func(cmd *cobra.Command, args []string) {

@@ -4,7 +4,7 @@ go 1.22.0
 
 require (
 	github.com/briandowns/spinner v1.23.0
-	github.com/city404/v6-public-rpc-proto/go v0.0.0-20240228084655-e73dc2e7eed1
+	github.com/city404/v6-public-rpc-proto/go v0.0.0-20240301073534-9e9b87242412
 	github.com/dgraph-io/badger/v4 v4.2.0
 	github.com/dustin/go-humanize v1.0.1
 	github.com/eiannone/keyboard v0.0.0-20220611211555-0d226195f203

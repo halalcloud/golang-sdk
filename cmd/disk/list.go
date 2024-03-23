@@ -102,7 +102,7 @@ func init() {
 	// listCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 }
 
-func printList(currentPath string, result *pubUserFile.FileListResponse) {
+func printList(_ string, result *pubUserFile.FileListResponse) {
 	data := [][]string{}
 
 	table := tablewriter.NewWriter(os.Stdout)

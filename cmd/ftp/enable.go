@@ -9,7 +9,7 @@ import (
 	"fmt"
 	"time"
 
-	pbDavConfig "github.com/city404/v6-public-rpc-proto/go/v6/webdavconfig"
+	pbSftpConfig "github.com/city404/v6-public-rpc-proto/go/v6/sftpconfig"
 	"github.com/halalcloud/golang-sdk/auth"
 	"github.com/halalcloud/golang-sdk/constants"
 	"github.com/spf13/cobra"
@@ -34,7 +34,7 @@ to quickly create a Cobra application.`,
 
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
 		defer cancel()
-		result, err := pbDavConfig.NewPubDavConfigClient(serv.GetGrpcConnection()).Enable(ctx, &pbDavConfig.DavConfig{})
+		result, err := pbSftpConfig.NewPubSftpConfigClient(serv.GetGrpcConnection()).Enable(ctx, &pbSftpConfig.SftpConfig{})
 		if err != nil {
 			fmt.Println(err)
 			return

@@ -57,6 +57,8 @@ github.com/city404/v6-public-rpc-proto/go v0.0.0-20240226171946-2fb6e218fb8d h1:
 github.com/city404/v6-public-rpc-proto/go v0.0.0-20240226171946-2fb6e218fb8d/go.mod h1:pCIv5dQ7nN8f4u/jx0PGsTiscUoClWKyhS/Ty26P8EQ=
 github.com/city404/v6-public-rpc-proto/go v0.0.0-20240228084655-e73dc2e7eed1 h1:W7Ibo7fBQPSVUdrvOsKa6r9W3RDl/FTVv1aYmPTrWi8=
 github.com/city404/v6-public-rpc-proto/go v0.0.0-20240228084655-e73dc2e7eed1/go.mod h1:pCIv5dQ7nN8f4u/jx0PGsTiscUoClWKyhS/Ty26P8EQ=
+github.com/city404/v6-public-rpc-proto/go v0.0.0-20240301073534-9e9b87242412 h1:UxQWcM4glcZNHIzU6b/sKZBV4GVc0kH0Jk4IYzr0l3g=
+github.com/city404/v6-public-rpc-proto/go v0.0.0-20240301073534-9e9b87242412/go.mod h1:pCIv5dQ7nN8f4u/jx0PGsTiscUoClWKyhS/Ty26P8EQ=
 github.com/client9/misspell v0.3.4/go.mod h1:qj6jICC3Q7zFZvVWo7KLAzC3yx5G7kyvSDkc90ppPyw=
 github.com/cncf/udpa/go v0.0.0-20191209042840-269d4d468f6f/go.mod h1:M8M6+tZqaGXZJjfX53e64911xZQV5JYwmTeXPW+k8Sc=
 github.com/cncf/udpa/go v0.0.0-20200629203442-efcf912fb354/go.mod h1:WmhPx2Nbnhtbo57+VJT5O0JRkEi1Wbu0z5j0R8u5Hbk=

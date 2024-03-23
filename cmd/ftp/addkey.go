@@ -15,10 +15,10 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// getCmd represents the login command
-var getCmd = &cobra.Command{
-	Use:   "get",
-	Short: "A brief description of your command",
+// addKeyCmd represents the login command
+var addKeyCmd = &cobra.Command{
+	Use:   "addkey",
+	Short: "Add ssh key to the server",
 	Long: `A longer description that spans multiple lines and likely contains examples
 and usage of using your command. For example:
 
@@ -32,20 +32,41 @@ to quickly create a Cobra application.`,
 			return
 		}
 
+		if len(args) < 1 {
+			fmt.Println("Please provide the ssh key")
+			return
+		}
+
+		sshKey := args[0]
+		if len(sshKey) < 1 {
+			fmt.Println("Please provide the ssh key")
+			return
+		}
+
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
 		defer cancel()
-		result, err := pbSftpConfig.NewPubSftpConfigClient(serv.GetGrpcConnection()).Get(ctx, &pbSftpConfig.SftpConfig{})
+		client := pbSftpConfig.NewPubSftpConfigClient(serv.GetGrpcConnection())
+		result, err := client.Get(ctx, &pbSftpConfig.SftpConfig{})
 		if err != nil {
 			fmt.Println(err)
 			return
 		}
-		data, _ := json.Marshal(result)
-		fmt.Println(string(data))
+		sourceKey := result.SshKey
+		if len(sourceKey) > 0 {
+			sshKey = sourceKey + "\n" + sshKey
+		}
+		data, err := client.Update(ctx, &pbSftpConfig.SftpConfig{SshKey: sshKey})
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+		dataJson, _ := json.Marshal(data)
+		fmt.Println(string(dataJson))
 	},
 }
 
 func init() {
-	FtpCmd.AddCommand(getCmd)
+	FtpCmd.AddCommand(addKeyCmd)
 
 	// Here you will define your flags and configuration settings.
 

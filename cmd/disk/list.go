@@ -15,9 +15,8 @@ import (
 	"github.com/eiannone/keyboard"
 	"github.com/halalcloud/golang-sdk/auth"
 	"github.com/halalcloud/golang-sdk/constants"
-	"github.com/halalcloud/golang-sdk/pkg/print"
+	cPrint "github.com/halalcloud/golang-sdk/pkg/print"
 	"github.com/halalcloud/golang-sdk/utils"
-	"github.com/olekukonko/tablewriter"
 	"github.com/spf13/cobra"
 )
 
@@ -49,7 +48,7 @@ var ListCmd = &cobra.Command{
 		client := pubUserFile.NewPubUserFileClient(serv.GetGrpcConnection())
 		for {
 			timeStart := time.Now()
-			sp := print.Spinner(os.Stdout, "Listing Directory [%s] ...", opDir)
+			sp := cPrint.Spinner(os.Stdout, "Listing Directory [%s] ...", opDir)
 			ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
 			defer cancel()
 			result, err := client.List(ctx, &pubUserFile.FileListRequest{
@@ -70,7 +69,7 @@ var ListCmd = &cobra.Command{
 			if result.Files != nil && len(result.Files) > 0 {
 				printList(opDir, result)
 			}
-			print.InfoStatusEvent(os.Stdout, "%d items, %s escaped.", len(result.Files), timeEscaped.String())
+			cPrint.InfoStatusEvent(os.Stdout, "%d items, %s escaped.", len(result.Files), timeEscaped.String())
 			if result.ListInfo == nil || result.ListInfo.Token == "" {
 				break
 			}
@@ -103,28 +102,36 @@ func init() {
 }
 
 func printList(_ string, result *pubUserFile.FileListResponse) {
-	data := [][]string{}
+	// data := [][]string{}
 
-	table := tablewriter.NewWriter(os.Stdout)
-	table.SetHeader([]string{"Name", "Type", "ID", "Size", "CreateTime"})
+	// table := tablewriter.NewWriter(os.Stdout)
+	// table.SetHeader([]string{"Name", "Type", "ID", "Size", "CreateTime"})
 	for _, v := range result.Files {
 		size := "-"
 		if !v.Dir {
 			size = humanize.IBytes(uint64(v.Size))
 		}
-		table.Append([]string{v.Name, v.MimeType, v.Identity, size, time.UnixMilli(v.CreateTs).Format("2006-01-02 15:04:05")})
+		// print.Info(os.Stdout, "%s %s %s %s %s", v.Name, v.MimeType, v.Identity, size, time.UnixMilli(v.CreateTs).Format("2006-01-02 15:04:05"))
+		// table.Append([]string{v.Name, v.MimeType, v.Identity, size, time.UnixMilli(v.CreateTs).Format("2006-01-02 15:04:05")})
+		println(fmt.Sprintf("*************************\nName: %s\nMime: %s\nID: %s\nPath: %s\nSize: %s\nCreate Time:%s\n*************************\n",
+			v.Name,
+			v.MimeType,
+			v.Identity,
+			v.Path,
+			size,
+			time.UnixMilli(v.CreateTs).Format("2006-01-02 15:04:05")))
 	}
 
-	hasMore := false
-	if result.ListInfo != nil && result.ListInfo.Token != "" {
-		hasMore = true
-	}
+	// hasMore := false
+	// if result.ListInfo != nil && result.ListInfo.Token != "" {
+	// 	hasMore = true
+	//}
 
-	if hasMore {
-		table.SetFooter([]string{"", "", "", "", "..."}) // Add Footer
-	}
+	//if hasMore {
+	//	table.SetFooter([]string{"", "", "", "", "..."}) // Add Footer
+	//}
 
 	// table.EnableBorder(false)                             // Set Border to false
-	table.AppendBulk(data) // Add Bulk Data
-	table.Render()
+	//table.AppendBulk(data) // Add Bulk Data
+	//table.Render()
 }

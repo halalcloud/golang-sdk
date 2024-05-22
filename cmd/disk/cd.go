@@ -48,6 +48,11 @@ to quickly create a Cobra application.`,
 			utils.SetCurrentDir(currentDir)
 			cmd.Run(PwdCmd, []string{})
 		}
+		if strings.HasPrefix(args[0], "/") {
+			currentDir = args[0]
+			utils.SetCurrentDir(currentDir)
+			cmd.Run(PwdCmd, []string{})
+		}
 		if args[0] != "." && args[0] != ".." && args[0] != "/" {
 			currentDir = currentDir + "/" + args[0]
 			if strings.HasPrefix(currentDir, "//") {

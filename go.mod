@@ -1,10 +1,11 @@
 module github.com/halalcloud/golang-sdk
 
-go 1.22.0
+go 1.22.3
 
 require (
+	github.com/baidubce/bce-sdk-go v0.9.180
 	github.com/briandowns/spinner v1.23.0
-	github.com/city404/v6-public-rpc-proto/go v0.0.0-20240301073534-9e9b87242412
+	github.com/city404/v6-public-rpc-proto/go v0.0.0-20240522014822-e949b90ed017
 	github.com/dgraph-io/badger/v4 v4.2.0
 	github.com/dustin/go-humanize v1.0.1
 	github.com/eiannone/keyboard v0.0.0-20220611211555-0d226195f203
@@ -17,7 +18,7 @@ require (
 	github.com/spf13/cobra v1.8.0
 	github.com/spf13/viper v1.17.0
 	github.com/zzzhr1990/go-common-entity v0.0.0-20221216044934-fd1c571e3a22
-	google.golang.org/grpc v1.62.0
+	google.golang.org/grpc v1.64.0
 )
 
 require (
@@ -28,7 +29,7 @@ require (
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang/glog v1.2.0 // indirect
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
-	github.com/golang/protobuf v1.5.3 // indirect
+	github.com/golang/protobuf v1.5.4 // indirect
 	github.com/golang/snappy v0.0.3 // indirect
 	github.com/google/flatbuffers v1.12.1 // indirect
 	github.com/hashicorp/hcl v1.0.0 // indirect
@@ -78,14 +79,14 @@ require (
 	go.opencensus.io v0.24.0 // indirect
 	go.uber.org/atomic v1.9.0 // indirect
 	go.uber.org/multierr v1.9.0 // indirect
-	golang.org/x/crypto v0.19.0 // indirect
+	golang.org/x/crypto v0.23.0 // indirect
 	golang.org/x/exp v0.0.0-20230905200255-921286631fa9 // indirect
-	golang.org/x/net v0.21.0 // indirect
-	golang.org/x/sys v0.17.0 // indirect
-	golang.org/x/term v0.17.0 // indirect
-	golang.org/x/text v0.14.0 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20240123012728-ef4313101c80 // indirect
-	google.golang.org/protobuf v1.32.0 // indirect
+	golang.org/x/net v0.25.0 // indirect
+	golang.org/x/sys v0.20.0 // indirect
+	golang.org/x/term v0.20.0 // indirect
+	golang.org/x/text v0.15.0 // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20240318140521-94a12d6c2237 // indirect
+	google.golang.org/protobuf v1.34.1 // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	rsc.io/qr v0.2.0 // indirect

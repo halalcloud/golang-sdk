@@ -10,6 +10,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"path/filepath"
 	"time"
 
 	pubUserFile "github.com/city404/v6-public-rpc-proto/go/v6/userfile"
@@ -51,7 +52,12 @@ Display Disk Usage, Quota.`,
 			newPath = "{id:{" + id + "}}"
 		}
 		client := pubUserFile.NewPubUserFileClient(serv.GetGrpcConnection())
-
+		dirname, err := os.UserHomeDir()
+		if err != nil {
+			print.FailureStatusEvent(os.Stdout, "Get home dir failed, error: %s", err.Error())
+		}
+		downloadsDir := filepath.Join(dirname, "Downloads")
+		print.InfoStatusEvent(os.Stdout, "Download Path [%s] ...", downloadsDir)
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
 		sliceDownloader := downloader.NewSliceDownloader(client, ctx, "")
@@ -82,10 +88,12 @@ Display Disk Usage, Quota.`,
 					return
 				}
 			}
-			fmt.Println(err)
+			fmt.Printf("slice parse error: %v\r", err)
 			return
 		}
-		fmt.Printf("source SHA1: %s, blocks: %d, file size: %d\n", result.Sha1, len(result.RawNodes), result.FileSize)
+		filePath := filepath.Join(findDownloadDir(), result.Name)
+		fmt.Printf("source SHA1: %s, blocks: %d, file size: %d, file: %s\n", result.Sha1, len(result.RawNodes), result.FileSize, filePath)
+		// fileName := result.
 		fileAddrs := []*pubUserFile.SliceDownloadInfo{}
 		batchRequest := []string{}
 		for _, slice := range result.RawNodes {
@@ -93,6 +101,7 @@ Display Disk Usage, Quota.`,
 			if len(batchRequest) >= 200 {
 				sliceAddress, err := client.GetSliceDownloadAddress(ctx, &pubUserFile.SliceDownloadAddressRequest{
 					Identity: batchRequest,
+					Version:  1,
 				})
 				if err != nil {
 					sp(false)
@@ -106,6 +115,7 @@ Display Disk Usage, Quota.`,
 		if len(batchRequest) > 0 {
 			sliceAddress, err := client.GetSliceDownloadAddress(ctx, &pubUserFile.SliceDownloadAddressRequest{
 				Identity: batchRequest,
+				Version:  1,
 			})
 			if err != nil {
 				sp(false)
@@ -118,6 +128,15 @@ Display Disk Usage, Quota.`,
 		sha := sha1.New()
 
 		fileSize := int64(0)
+		//filePath := filepath.Join(utils.GetCurrentDir(), result)
+
+		fileDownload, err := os.Create(filePath)
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+
+		defer fileDownload.Close()
 		for i, addr := range fileAddrs {
 
 			displaySp := i%10 == 0
@@ -133,14 +152,23 @@ Display Disk Usage, Quota.`,
 				fmt.Println(err)
 				return
 			}
+
 			sha.Write(dataBytes)
+			_, err = fileDownload.Write(dataBytes)
+			if err != nil {
+				if sp != nil {
+					sp(false)
+				}
+				fmt.Println(err)
+				return
+			}
 			fileSize += int64(len(dataBytes))
 			if sp != nil {
 				sp(true)
 			}
 		}
 		shaSum := sha.Sum(nil)
-		fmt.Printf("SHA1: %x, file size: %d\n", shaSum, fileSize)
+		fmt.Printf("SHA1: %x, file size: %d -> %s\n", shaSum, fileSize, filePath)
 		// print.SuccessStatusEvent(os.Stdout, "File [%s -> %s] pieces: %s", newPath, id, string(dataJson))
 
 		//ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
@@ -192,6 +220,13 @@ func getRawFiles(addr *pubUserFile.SliceDownloadInfo) ([]byte, error) {
 		return nil, fmt.Errorf("bad status: %s, body: %s", resp.Status, body)
 	}
 
+	if addr.Encrypt > 0 {
+		cd := uint8(addr.Encrypt)
+		for idx := 0; idx < len(body); idx++ {
+			body[idx] = body[idx] ^ cd
+		}
+	}
+
 	sourceCid, err := cid.Decode(addr.Identity)
 	if err != nil {
 		return nil, err
@@ -224,4 +259,30 @@ func init() {
 	// is called directly, e.g.:
 	// DownloadCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 	DownloadCmd.Flags().StringP("id", "I", "", "rm by id")
+}
+
+var (
+	DownloadDirNames []string = []string{"Downloads", "downloads", "download", "Downloads", "etc..."}
+)
+
+func findDownloadDir() string {
+	// var downloadDir string
+	var DownloadDirNames []string = []string{"Downloads", "downloads", "download", "Downloads", "etc..."}
+
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		return os.TempDir()
+	}
+
+	for _, ddn := range DownloadDirNames {
+		var dir = filepath.Join(homeDir, ddn)
+
+		if _, err := os.Stat(dir); os.IsNotExist(err) {
+			// fmt.Println(dir, "does not exist")
+		} else {
+			// fmt.Println("The provided directory named", dir, "exists")
+			return dir
+		}
+	}
+	return os.TempDir()
 }

@@ -8,9 +8,11 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"strings"
+	"path/filepath"
 	"time"
 
+	"github.com/baidubce/bce-sdk-go/bce"
+	"github.com/baidubce/bce-sdk-go/services/bos"
 	pubUserFile "github.com/city404/v6-public-rpc-proto/go/v6/userfile"
 	"github.com/halalcloud/golang-sdk/auth"
 	"github.com/halalcloud/golang-sdk/constants"
@@ -22,11 +24,11 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-// CreateCmd represents the mkdir command
-var CreateCmd = &cobra.Command{
-	Use:     "create",
+// UploadCmd represents the mkdir command
+var UploadCmd = &cobra.Command{
+	Use:     "upload",
 	Short:   "A brief description of your command",
-	Aliases: []string{"md"},
+	Aliases: []string{"up"},
 	Long: `A longer description that spans multiple lines and likely contains examples
 and usage of using your command. For example:
 
@@ -44,50 +46,32 @@ to quickly create a Cobra application.`,
 			fmt.Println("create: missing operand")
 			return
 		}
-		if len(args) == 1 {
-			filename := args[0]
-			if strings.HasSuffix(filename, ".docx") || strings.HasSuffix(filename, ".xlsx") || strings.HasSuffix(filename, ".pptx") {
-				newDir := userfile.NewFormattedPath(utils.GetCurrentDir()).GetPath()
-				sp := print.Spinner(os.Stdout, "Create Doc File [%s] ...", newDir)
-				ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
-				defer cancel()
 
-				result, err := pubUserFile.NewPubUserFileClient(serv.GetGrpcConnection()).CreateDoc(ctx, &pubUserFile.File{
-					// Parent: &pubUserFile.File{Path: currentDir},
-					Path: newDir,
-					Name: filename,
-				})
-				if err != nil {
-					sp(false)
-					status, ok := status.FromError(err)
-					log.Printf("Error: %v", err)
-					if ok {
-						if status.Code() == codes.NotFound {
-							fmt.Printf("Directory [%s] not found, back to root.\n", currentDir)
-							utils.SetCurrentDir("/")
-							return
-						}
-
-					}
-					fmt.Println(err)
-					return
-				}
-				sp(true)
-				print.SuccessStatusEvent(os.Stdout, "File [%s] created. preview at: %s, edit at: %s", filename, result.PreviewAddress, result.EditAddress)
-				println(result.EditToken)
-			} else {
-				fmt.Println("create: missing content identity")
-			}
+		// get last arg, and check if it is a file
+		lastArg := args[len(args)-1]
+		if !utils.IsFile(lastArg) {
+			fmt.Println("create: last operand must be a file")
 			return
 		}
-		newDir := userfile.NewFormattedPath(utils.GetCurrentOpDir(args, 0)).GetPath()
+		path, _ := filepath.Abs(lastArg)
+		fileInfo, err := os.Stat(path)
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+
+		log.Printf("file: %s, file path: %s", fileInfo.Name(), path)
+
+		newDir := userfile.NewFormattedPath(utils.GetCurrentDir()).GetPath()
+		newDir += "/" + fileInfo.Name()
 		sp := print.Spinner(os.Stdout, "Create File [%s] ...", newDir)
+
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
 		defer cancel()
-		result, err := pubUserFile.NewPubUserFileClient(serv.GetGrpcConnection()).Create(ctx, &pubUserFile.File{
+		result, err := pubUserFile.NewPubUserFileClient(serv.GetGrpcConnection()).CreateUploadToken(ctx, &pubUserFile.File{
 			// Parent: &pubUserFile.File{Path: currentDir},
-			Path:            newDir,
-			ContentIdentity: args[1],
+			Path: newDir,
+			//ContentIdentity: args[1],
 		})
 		if err != nil {
 			sp(false)
@@ -103,12 +87,35 @@ to quickly create a Cobra application.`,
 			return
 		}
 		sp(true)
-		print.SuccessStatusEvent(os.Stdout, "File [%s] created.", result.Path)
+
+		print.InfoStatusEvent(os.Stdout, "Starting upload [%s].", path)
+		// -^-^-
+		clientConfig := bos.BosClientConfiguration{
+			Ak:               result.AccessKey,
+			Sk:               result.SecretKey,
+			Endpoint:         result.Endpoint,
+			RedirectDisabled: false,
+		}
+
+		// 初始化一个BosClient
+		bosClient, err := bos.NewClientWithConfig(&clientConfig)
+		if err != nil {
+			print.FailureStatusEvent(os.Stdout, "failed to create bos client: %v", err)
+			return
+		}
+		// return bosClient, nil
+		body, _ := bce.NewBodyFromString("12345")
+		postResult, err := bosClient.PutObject(result.Bucket, result.Key, body, nil)
+		if err != nil {
+			print.FailureStatusEvent(os.Stdout, "failed to upload file: %v ===> %s/%s", err, clientConfig.Ak, clientConfig.Sk)
+			return
+		}
+		print.SuccessStatusEvent(os.Stdout, "File [%s] uploaded. data: %s", fileInfo.Name(), postResult)
 	},
 }
 
 func init() {
-	DiskCmd.AddCommand(CreateCmd)
+	DiskCmd.AddCommand(UploadCmd)
 
 	// Here you will define your flags and configuration settings.
 

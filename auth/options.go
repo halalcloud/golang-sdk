@@ -5,7 +5,10 @@ import "google.golang.org/grpc"
 func defaultOptions() halalOptions {
 	return halalOptions{
 		// onRefreshTokenRefreshed: func(string) {},
-		grpcOptions: []grpc.DialOption{},
+		grpcOptions: []grpc.DialOption{
+			grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(1024 * 1024 * 32)),
+			// grpc.WithMaxMsgSize(1024 * 1024 * 1024),
+		},
 	}
 }
 

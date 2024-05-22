@@ -9,8 +9,10 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
+	bauth "github.com/baidubce/bce-sdk-go/auth"
 	"github.com/baidubce/bce-sdk-go/bce"
 	"github.com/baidubce/bce-sdk-go/services/bos"
 	pubUserFile "github.com/city404/v6-public-rpc-proto/go/v6/userfile"
@@ -63,8 +65,8 @@ to quickly create a Cobra application.`,
 		log.Printf("file: %s, file path: %s", fileInfo.Name(), path)
 
 		newDir := userfile.NewFormattedPath(utils.GetCurrentDir()).GetPath()
-		newDir += "/" + fileInfo.Name()
-		sp := print.Spinner(os.Stdout, "Create File [%s] ...", newDir)
+		newDir = strings.TrimSuffix(newDir, "/") + "/" + fileInfo.Name()
+		sp := print.Spinner(os.Stdout, "Upload File [%s] ...", newDir)
 
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
 		defer cancel()
@@ -95,6 +97,7 @@ to quickly create a Cobra application.`,
 			Sk:               result.SecretKey,
 			Endpoint:         result.Endpoint,
 			RedirectDisabled: false,
+			//SessionToken:     result.SessionToken,
 		}
 
 		// 初始化一个BosClient
@@ -103,14 +106,27 @@ to quickly create a Cobra application.`,
 			print.FailureStatusEvent(os.Stdout, "failed to create bos client: %v", err)
 			return
 		}
+		stsCredential, err := bauth.NewSessionBceCredentials(
+			result.AccessKey,
+			result.SecretKey,
+			result.Token)
+		if err != nil {
+			print.FailureStatusEvent(os.Stdout, "failed to create sts credential: %v", err)
+			return
+		}
+		bosClient.Config.Credentials = stsCredential
 		// return bosClient, nil
-		body, _ := bce.NewBodyFromString("12345")
+		body, err := bce.NewBodyFromFile(path)
+		if err != nil {
+			print.FailureStatusEvent(os.Stdout, "failed to read file: %v", err)
+			return
+		}
 		postResult, err := bosClient.PutObject(result.Bucket, result.Key, body, nil)
 		if err != nil {
 			print.FailureStatusEvent(os.Stdout, "failed to upload file: %v ===> %s/%s", err, clientConfig.Ak, clientConfig.Sk)
 			return
 		}
-		print.SuccessStatusEvent(os.Stdout, "File [%s] uploaded. data: %s", fileInfo.Name(), postResult)
+		print.SuccessStatusEvent(os.Stdout, "File [%s] uploaded. etag: %s, key: %s", fileInfo.Name(), postResult, result.Key)
 	},
 }
 

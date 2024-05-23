@@ -65,6 +65,7 @@ func init() {
 	rootCmd.AddCommand(disk.CreateCmd)
 	rootCmd.AddCommand(disk.UploadCmd)
 	rootCmd.AddCommand(disk.RmCmd)
+	rootCmd.AddCommand(disk.PreviewCmd)
 	rootCmd.AddCommand(disk.CpCmd)
 	rootCmd.AddCommand(disk.ListTrashCmd)
 	rootCmd.AddCommand(disk.RnCmd)

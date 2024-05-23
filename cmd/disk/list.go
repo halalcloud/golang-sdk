@@ -113,13 +113,14 @@ func printList(_ string, result *pubUserFile.FileListResponse) {
 		}
 		// print.Info(os.Stdout, "%s %s %s %s %s", v.Name, v.MimeType, v.Identity, size, time.UnixMilli(v.CreateTs).Format("2006-01-02 15:04:05"))
 		// table.Append([]string{v.Name, v.MimeType, v.Identity, size, time.UnixMilli(v.CreateTs).Format("2006-01-02 15:04:05")})
-		println(fmt.Sprintf("*************************\nName: %s\nMime: %s\nID: %s\nPath: %s\nSize: %s\nCreate Time:%s\n*************************\n",
+		println(fmt.Sprintf("*************************\nName: %s\nMime: %s\nID: %s\nPath: %s\nSize: %s (v:%d)\nCreate Time:%s\n*************************\n",
 			v.Name,
 			v.MimeType,
 			v.Identity,
 			v.Path,
 			size,
-			time.UnixMilli(v.CreateTs).Format("2006-01-02 15:04:05")))
+			v.Version,
+			time.UnixMilli(v.UpdateTs).Format("2006-01-02 15:04:05")))
 	}
 
 	// hasMore := false

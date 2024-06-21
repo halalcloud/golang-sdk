@@ -41,15 +41,18 @@ Display Disk Usage, Quota.`,
 			fmt.Println(err)
 			return
 		}
-		if len(args) == 0 {
-			fmt.Println("mkdir: missing operand")
+		id, _ := cmd.Flags().GetString("id")
+		if len(args) == 0 && len(id) == 0 {
+			fmt.Println("download: missing operand")
+
 			return
 		}
-		id, _ := cmd.Flags().GetString("id")
 
-		newPath := userfile.NewFormattedPath(utils.GetCurrentOpDir(args, 0)).GetPath()
+		newPath := ""
 		if len(id) > 0 {
 			newPath = "{id:{" + id + "}}"
+		} else {
+			newPath = userfile.NewFormattedPath(utils.GetCurrentOpDir(args, 0)).GetPath()
 		}
 		client := pubUserFile.NewPubUserFileClient(serv.GetGrpcConnection())
 		dirname, err := os.UserHomeDir()
@@ -84,7 +87,7 @@ Display Disk Usage, Quota.`,
 			status, ok := status.FromError(err)
 			if ok {
 				if status.Code() == codes.NotFound {
-					print.FailureStatusEvent(os.Stdout, "File [%s -> %s] not found, back to root.", newPath, id)
+					print.FailureStatusEvent(os.Stdout, "1File [%s -> %s] not found, back to root.", newPath, id)
 					return
 				}
 			}
@@ -96,6 +99,7 @@ Display Disk Usage, Quota.`,
 		// fileName := result.
 		fileAddrs := []*pubUserFile.SliceDownloadInfo{}
 		batchRequest := []string{}
+
 		for _, slice := range result.RawNodes {
 			batchRequest = append(batchRequest, slice)
 			if len(batchRequest) >= 200 {
@@ -227,16 +231,19 @@ func getRawFiles(addr *pubUserFile.SliceDownloadInfo) ([]byte, error) {
 		}
 	}
 
-	sourceCid, err := cid.Decode(addr.Identity)
-	if err != nil {
-		return nil, err
-	}
-	checkCid, err := sourceCid.Prefix().Sum(body)
-	if err != nil {
-		return nil, err
-	}
-	if !checkCid.Equals(sourceCid) {
-		return nil, fmt.Errorf("bad cid: %s, body: %s", checkCid.String(), body)
+	if addr.StoreType != 10 {
+
+		sourceCid, err := cid.Decode(addr.Identity)
+		if err != nil {
+			return nil, err
+		}
+		checkCid, err := sourceCid.Prefix().Sum(body)
+		if err != nil {
+			return nil, err
+		}
+		if !checkCid.Equals(sourceCid) {
+			return nil, fmt.Errorf("bad cid: %s, body: %s", checkCid.String(), body)
+		}
 	}
 
 	return body, nil

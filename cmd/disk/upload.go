@@ -52,7 +52,7 @@ to quickly create a Cobra application.`,
 		// get last arg, and check if it is a file
 		lastArg := args[len(args)-1]
 		if !utils.IsFile(lastArg) {
-			fmt.Println("create: last operand must be a file")
+			fmt.Println("create: last operand " + lastArg + " must be a file")
 			return
 		}
 		path, _ := filepath.Abs(lastArg)

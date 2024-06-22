@@ -51,16 +51,16 @@ func NewAuthServiceWithOauth(writer io.Writer, appID, appVersion, appSecret stri
 	}
 
 	grpcServer := "grpcuserapi.2dland.cn:443"
-	dialContext, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
+	// dialContext, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	//defer cancel()
 	grpcOptions := svc.dopts.grpcOptions
-	grpcOptions = append(grpcOptions, grpc.WithBlock(), grpc.WithAuthority("grpcuserapi.2dland.cn"), grpc.WithTransportCredentials(credentials.NewTLS(&tls.Config{})), grpc.WithUnaryInterceptor(func(ctx context.Context, method string, req, reply interface{}, cc *grpc.ClientConn, invoker grpc.UnaryInvoker, opts ...grpc.CallOption) error {
+	grpcOptions = append(grpcOptions, grpc.WithAuthority("grpcuserapi.2dland.cn"), grpc.WithTransportCredentials(credentials.NewTLS(&tls.Config{})), grpc.WithUnaryInterceptor(func(ctx context.Context, method string, req, reply interface{}, cc *grpc.ClientConn, invoker grpc.UnaryInvoker, opts ...grpc.CallOption) error {
 		ctxx := svc.signContext(method, ctx)
 		err := invoker(ctxx, method, req, reply, cc, opts...) // invoking RPC method
 		return err
 	}))
 
-	grpcConnection, err := grpc.DialContext(dialContext, grpcServer, grpcOptions...)
+	grpcConnection, err := grpc.NewClient(grpcServer, grpcOptions...)
 	if err != nil {
 		return nil, err
 	}
@@ -154,15 +154,42 @@ func NewAuthService(appID, appVersion, appSecret, refreshToken string, options .
 		refreshToken = viper.GetString("refresh_token")
 	}
 
+	// read access token from config
+
+	readedAccessToken := viper.GetString("access_token")
+	if len(readedAccessToken) > 0 {
+		// svc.accessToken = readedAccessToken
+		accessTokenExpiredAt := viper.GetInt64("access_token_expired_at")
+		current := time.Now().UnixMilli()
+		if accessTokenExpiredAt < current {
+			// access token expired
+			// svc.accessToken = ""
+			// svc.accessTokenExpiredAt = 0
+			// readedAccessToken = ""
+			println("access token expired:", accessTokenExpiredAt)
+			viper.Set("access_token", "")
+			viper.Set("access_token_expired_at", 0)
+			err := viper.WriteConfig()
+			if err != nil {
+				err = viper.SafeWriteConfig()
+			}
+			if err != nil {
+				println(err.Error())
+			}
+		} else {
+			svc.accessTokenExpiredAt = accessTokenExpiredAt
+			svc.accessToken = readedAccessToken
+		}
+
+	}
+
 	for _, opt := range options {
 		opt.apply(&svc.dopts)
 	}
 
 	grpcServer := "grpcuserapi.2dland.cn:443"
-	dialContext, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
 	grpcOptions := svc.dopts.grpcOptions
-	grpcOptions = append(grpcOptions, grpc.WithBlock(), grpc.WithAuthority("grpcuserapi.2dland.cn"), grpc.WithTransportCredentials(credentials.NewTLS(&tls.Config{})), grpc.WithUnaryInterceptor(func(ctx context.Context, method string, req, reply interface{}, cc *grpc.ClientConn, invoker grpc.UnaryInvoker, opts ...grpc.CallOption) error {
+	grpcOptions = append(grpcOptions, grpc.WithAuthority("grpcuserapi.2dland.cn"), grpc.WithTransportCredentials(credentials.NewTLS(&tls.Config{})), grpc.WithUnaryInterceptor(func(ctx context.Context, method string, req, reply interface{}, cc *grpc.ClientConn, invoker grpc.UnaryInvoker, opts ...grpc.CallOption) error {
 
 		// <!---- comment start ---->
 		// check if accesstoken is expired, if expired, refresh it, this operation is not necessary for every request
@@ -225,7 +252,7 @@ func NewAuthService(appID, appVersion, appSecret, refreshToken string, options .
 		// post-processing
 		return err
 	}))
-	grpcConnection, err := grpc.DialContext(dialContext, grpcServer, grpcOptions...)
+	grpcConnection, err := grpc.NewClient(grpcServer, grpcOptions...)
 
 	if err != nil {
 		return nil, err
@@ -255,8 +282,8 @@ func (s *AuthService) OnAccessTokenRefreshed(accessToken string, accessTokenExpi
 	defer s.configMutex.Unlock()
 	s.refreshToken = refreshToken
 	viper.Set("refresh_token", refreshToken)
-	// viper.Set("access_token", accessToken)
-	// viper.Set("access_token_expired_at", accessTokenExpiredAt)
+	viper.Set("access_token", accessToken)
+	viper.Set("access_token_expired_at", accessTokenExpiredAt)
 	viper.Set("refresh_token_expired_at", refreshTokenExpiredAt)
 	err := viper.WriteConfig()
 	if err != nil {

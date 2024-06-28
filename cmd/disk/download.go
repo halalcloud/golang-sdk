@@ -87,7 +87,7 @@ Display Disk Usage, Quota.`,
 			status, ok := status.FromError(err)
 			if ok {
 				if status.Code() == codes.NotFound {
-					print.FailureStatusEvent(os.Stdout, "1File [%s -> %s] not found, back to root.", newPath, id)
+					print.FailureStatusEvent(os.Stdout, "File [%s -> %s] not found, back to root.", newPath, id)
 					return
 				}
 			}
@@ -265,7 +265,7 @@ func init() {
 	// Cobra supports local flags which will only run when this command
 	// is called directly, e.g.:
 	// DownloadCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
-	DownloadCmd.Flags().StringP("id", "I", "", "rm by id")
+	DownloadCmd.Flags().StringP("id", "I", "", "download by id")
 }
 
 var (

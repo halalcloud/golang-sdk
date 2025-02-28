@@ -6,24 +6,38 @@ package disk
 import (
 	"context"
 	"fmt"
+	"io"
 	"log"
+	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
 	"time"
 
-	bauth "github.com/baidubce/bce-sdk-go/auth"
-	"github.com/baidubce/bce-sdk-go/bce"
-	"github.com/baidubce/bce-sdk-go/services/bos"
+	//"time"
 	pubUserFile "github.com/city404/v6-public-rpc-proto/go/v6/userfile"
-	"github.com/halalcloud/golang-sdk/auth"
-	"github.com/halalcloud/golang-sdk/constants"
-	"github.com/halalcloud/golang-sdk/pkg/print"
-	"github.com/halalcloud/golang-sdk/utils"
-	"github.com/spf13/cobra"
-	"github.com/zzzhr1990/go-common-entity/userfile"
+	"github.com/ipfs/boxo/blockservice"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+
+	"github.com/ipfs/boxo/ipld/unixfs/importer/balanced"
+
+	//pubUserFile "github.com/city404/v6-public-rpc-proto/go/v6/userfile"
+	"github.com/halalcloud/golang-sdk/auth"
+	"github.com/halalcloud/golang-sdk/constants"
+	"github.com/halalcloud/golang-sdk/ipfs"
+	"github.com/halalcloud/golang-sdk/pkg/print"
+	"github.com/halalcloud/golang-sdk/utils"
+	"github.com/ipfs/boxo/ipld/merkledag"
+
+	// ipld "github.com/ipfs/go-ipld-format"
+	"github.com/spf13/cobra"
+	"github.com/zzzhr1990/go-common-entity/userfile"
+
+	//"google.golang.org/grpc/codes"
+	//"google.golang.org/grpc/status"
+	chunker "github.com/ipfs/boxo/chunker"
+	"github.com/ipfs/boxo/ipld/unixfs/importer/helpers"
 )
 
 // UploadCmd represents the mkdir command
@@ -48,6 +62,7 @@ to quickly create a Cobra application.`,
 			fmt.Println("create: missing operand")
 			return
 		}
+		serv.GetGrpcConnection()
 
 		// get last arg, and check if it is a file
 		lastArg := args[len(args)-1]
@@ -66,17 +81,82 @@ to quickly create a Cobra application.`,
 
 		newDir := userfile.NewFormattedPath(utils.GetCurrentDir()).GetPath()
 		newDir = strings.TrimSuffix(newDir, "/") + "/" + fileInfo.Name()
-		sp := print.Spinner(os.Stdout, "Upload File [%s] ...", newDir)
 
+		helpers.BlockSizeLimit = constants.IpfsDefaultBlockSize * 2
+		/*
+			sp := print.Spinner(os.Stdout, "Upload File [%s] ...", newDir)
+			ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
+			defer cancel()
+			result, err := pubUserFile.NewPubUserFileClient(serv.GetGrpcConnection()).CreateUploadTask(ctx, &pubUserFile.File{
+				// Parent: &pubUserFile.File{Path: currentDir},
+				Path: newDir,
+				//ContentIdentity: args[1],
+			})
+			if err != nil {
+				sp(false)
+				status, ok := status.FromError(err)
+				if ok {
+					if status.Code() == codes.NotFound {
+						fmt.Printf("Directory [%s] not found, back to root.\n", currentDir)
+						utils.SetCurrentDir("/")
+						return
+					}
+				}
+				fmt.Println(err)
+				return
+			}
+			sp(true)
+		*/
+		fi, err := os.Open(path)
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+		defer fi.Close()
+		reader := fi
+
+		print.InfoStatusEvent(os.Stdout, "Starting upload [%s].", path)
+		bserv := blockservice.New(&ipfs.NullBlockstore{}, nil)
+		dserv := merkledag.NewDAGService(bserv)
+		// -^-^-
+		chnk := chunker.NewSizeSplitter(reader, constants.IpfsDefaultBlockSize)
+		params := helpers.DagBuilderParams{
+			Dagserv:    dserv,
+			RawLeaves:  true,
+			Maxlinks:   constants.IpfsDefaultBlockSize,
+			NoCopy:     false,
+			CidBuilder: merkledag.V1CidPrefix(),
+			//FileMode:    adder.FileMode,
+			//FileModTime: adder.FileMtime,
+		}
+
+		db, err := params.New(chnk)
+		if err != nil {
+			print.FailureStatusEvent(os.Stdout, "New DagBuilder error: %s", err)
+			return
+		}
+		//if adder.Trickle {
+		//	nd, err = trickle.Layout(db)
+		//} else {
+		nd, err := balanced.Layout(db)
+		//}
+		if err != nil {
+			print.FailureStatusEvent(os.Stdout, "Layout error: %s", err)
+			return
+		}
+
+		cid := nd.Cid()
+		print.SuccessStatusEvent(os.Stdout, "CID: %s", cid.String())
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
 		defer cancel()
-		result, err := pubUserFile.NewPubUserFileClient(serv.GetGrpcConnection()).CreateUploadToken(ctx, &pubUserFile.File{
+		result, err := pubUserFile.NewPubUserFileClient(serv.GetGrpcConnection()).CreateUploadTask(ctx, &pubUserFile.File{
 			// Parent: &pubUserFile.File{Path: currentDir},
-			Path: newDir,
+			Path:            newDir,
+			ContentIdentity: cid.String(),
+			Size:            fileInfo.Size(),
 			//ContentIdentity: args[1],
 		})
 		if err != nil {
-			sp(false)
 			status, ok := status.FromError(err)
 			if ok {
 				if status.Code() == codes.NotFound {
@@ -88,45 +168,45 @@ to quickly create a Cobra application.`,
 			fmt.Println(err)
 			return
 		}
-		sp(true)
+		if result.Created {
+			print.SuccessStatusEvent(os.Stdout, "Upload Success. (Fast Upload)")
+			return
+		}
+		print.InfoStatusEvent(os.Stdout, "Starting upload [%s => %s].", result.UploadAddress, result.Task)
+		httpClient := &http.Client{
+			Timeout: time.Second * 90,
+		}
+		reader.Seek(0, io.SeekStart)
+		uploadDagService := merkledag.NewDAGService(blockservice.New(ipfs.NewUploadBlockstore(httpClient, result.UploadAddress, result.Task, cid.String()), nil))
+		params = helpers.DagBuilderParams{
+			Dagserv:    uploadDagService,
+			RawLeaves:  true,
+			Maxlinks:   constants.IpfsDefaultBlockSize,
+			NoCopy:     false,
+			CidBuilder: merkledag.V1CidPrefix(),
+			//FileMode:    adder.FileMode,
+			//FileModTime: adder.FileMtime,
+		}
+		chnk = chunker.NewSizeSplitter(reader, constants.IpfsDefaultBlockSize)
 
-		print.InfoStatusEvent(os.Stdout, "Starting upload [%s].", path)
-		// -^-^-
-		clientConfig := bos.BosClientConfiguration{
-			Ak:               result.AccessKey,
-			Sk:               result.SecretKey,
-			Endpoint:         result.Endpoint,
-			RedirectDisabled: false,
-			//SessionToken:     result.SessionToken,
+		db, err = params.New(chnk)
+		if err != nil {
+			print.FailureStatusEvent(os.Stdout, "New UploadDagBuilder error: %s", err)
+			return
+		}
+		//if adder.Trickle {
+		//	nd, err = trickle.Layout(db)
+		//} else {
+		nd, err = balanced.Layout(db)
+		//}
+		if err != nil {
+			print.FailureStatusEvent(os.Stdout, "Layout error: %s", err)
+			return
 		}
 
-		// 初始化一个BosClient
-		bosClient, err := bos.NewClientWithConfig(&clientConfig)
-		if err != nil {
-			print.FailureStatusEvent(os.Stdout, "failed to create bos client: %v", err)
-			return
-		}
-		stsCredential, err := bauth.NewSessionBceCredentials(
-			result.AccessKey,
-			result.SecretKey,
-			result.Token)
-		if err != nil {
-			print.FailureStatusEvent(os.Stdout, "failed to create sts credential: %v", err)
-			return
-		}
-		bosClient.Config.Credentials = stsCredential
-		// return bosClient, nil
-		body, err := bce.NewBodyFromFile(path)
-		if err != nil {
-			print.FailureStatusEvent(os.Stdout, "failed to read file: %v", err)
-			return
-		}
-		postResult, err := bosClient.PutObject(result.Bucket, result.Key, body, nil)
-		if err != nil {
-			print.FailureStatusEvent(os.Stdout, "failed to upload file: %v ===> %s/%s", err, clientConfig.Ak, clientConfig.Sk)
-			return
-		}
-		print.SuccessStatusEvent(os.Stdout, "File [%s] uploaded. etag: %s, key: %s", fileInfo.Name(), postResult, result.Key)
+		newCid := nd.Cid()
+		print.SuccessStatusEvent(os.Stdout, "Upload CID: %s", newCid.String())
+		print.SuccessStatusEvent(os.Stdout, "Upload Success.")
 	},
 }
 

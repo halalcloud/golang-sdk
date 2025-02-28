@@ -76,7 +76,7 @@ to quickly create a Cobra application.`,
 			sp(true)
 			timeEscaped := time.Since(timeStart)
 
-			if result.Files != nil && len(result.Files) > 0 {
+			if len(result.Files) > 0 {
 				printList("-", result)
 			}
 			print.InfoStatusEvent(os.Stdout, "%d items, %s escaped.", len(result.Files), timeEscaped.String())

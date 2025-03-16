@@ -96,7 +96,7 @@ to quickly create a Cobra application.`,
 		bufferSize := int(result.BlockSize)
 		buffer := make([]byte, bufferSize)
 		slicesList := make([]string, 0)
-		codec := uint64(cid.Raw)
+		codec := uint64(0x55)
 		if result.BlockCodec > 0 {
 			codec = uint64(result.BlockCodec)
 		}

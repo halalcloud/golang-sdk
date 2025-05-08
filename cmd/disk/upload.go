@@ -193,9 +193,9 @@ func makeFile(fileSlice []string, taskID string, uploadAddress string) (*pubUser
 		Method: http.MethodPost,
 		URL:    u,
 		Header: map[string][]string{
-			"Accept":         {"application/json"},
-			"Content-Type":   {"application/octet-stream"},
-			"Content-Length": {fmt.Sprintf("%d", len(fileSlice))},
+			"Accept":       {"application/json"},
+			"Content-Type": {"application/json"},
+			//"Content-Length": {fmt.Sprintf("%d", len(n))},
 		},
 		Body: io.NopCloser(bytes.NewReader(n)),
 	}
@@ -275,9 +275,9 @@ func postFileSlice(fileSlice []byte, taskID string, uploadAddress string, preix 
 		Method: http.MethodPost,
 		URL:    u,
 		Header: map[string][]string{
-			"Accept":         {"application/json"},
-			"Content-Type":   {"application/octet-stream"},
-			"Content-Length": {fmt.Sprintf("%d", len(fileSlice))},
+			"Accept":       {"application/json"},
+			"Content-Type": {"application/octet-stream"},
+			// "Content-Length": {fmt.Sprintf("%d", len(fileSlice))},
 		},
 		Body: io.NopCloser(bytes.NewReader(fileSlice)),
 	}
